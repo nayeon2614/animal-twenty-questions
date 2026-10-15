@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐾 동물 스무고개</title>
+<style>
+*{box-sizing:border-box}
+body{
+    margin:0;
+    min-height:100vh;
+    font-family:"Noto Sans KR",Arial,sans-serif;
+    background:linear-gradient(135deg,#e9f8e9,#eaf3ff);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding:20px;
+    color:#333;
+}
+.game{
+    width:100%;
+    max-width:680px;
+    background:white;
+    border-radius:28px;
+    padding:28px;
+    box-shadow:0 15px 45px rgba(50,90,60,.15);
+}
+h1{
+    text-align:center;
+    margin:0;
+    font-size:30px;
+}
+.subtitle{
+    text-align:center;
+    color:#777;
+    margin:8px 0 20px;
+}
+.animal-icon{
+    text-align:center;
+    font-size:64px;
+    margin-bottom:12px;
+}
+.status{
+    display:flex;
+    justify-content:space-between;
+    background:#f0f8f0;
+    border-radius:14px;
+    padding:13px 16px;
+    margin-bottom:15px;
+    font-size:14px;
+}
+.status strong{
+    color:#4c9b58;
+}
+.chat{
+    height:350px;
+    overflow-y:auto;
+    background:#fafafa;
+    border:1px solid #eee;
+    border-radius:18px;
+    padding:15px;
+    margin-bottom:14px;
+}
+.message{
+    max-width:90%;
+    padding:11px 14px;
+    border-radius:16px;
+    margin:9px 0;
+    line-height:1.6;
+    word-break:keep-all;
+}
+.bot{
+    background:#e9f7e9;
+    margin-right:auto;
+}
+.user{
+    background:#e7f1ff;
+    margin-left:auto;
+    text-align:right;
+}
+.row{
+    display:flex;
+    gap:8px;
+}
+input{
+    flex:1;
+    min-width:0;
+    padding:13px;
+    border:2px solid #ddd;
+    border-radius:12px;
+    outline:none;
+    font-size:14px;
+}
+input:focus{
+    border-color:#69ad72;
+}
+button{
+    border:0;
+    border-radius:12px;
+    padding:12px 16px;
+    cursor:pointer;
+    font-weight:bold;
+    font-size:14px;
+}
+.ask{
+    background:#62ad6b;
+    color:white;
+}
+.guess{
+    width:100%;
+    margin-top:9px;
+    background:#ffb54a;
+    color:white;
+}
+.restart{
+    width:100%;
+    margin-top:14px;
+    background:#333;
+    color:white;
+}
+.result{
+    display:none;
+    text-align:center;
+    padding:14px;
+    border-radius:14px;
+    margin-top:12px;
+    font-size:20px;
+    font-weight:bold;
+}
+.success{
+    background:#fff3ae;
+    color:#d28b00;
+}
+.fail{
+    background:#ffe4e4;
+    color:#d25b5b;
+}
+.tip{
+    text-align:center;
+    color:#999;
+    font-size:12px;
+    margin-top:8px;
+}
+@media(max-width:520px){
+    .game{padding:20px}
+    .row{flex-direction:column}
+    .ask{width:100%}
+}
+</style>
+</head>
+<body>
+<div class="game">
+<h1>🐾 동물 스무고개</h1>
+<div class="subtitle">
+내가 생각한 동물을 질문으로 맞혀봐!
+</div>
+<div class="animal-icon">🤔</div>
+<div class="status">
+<span>질문 <strong><span id="qCount">0</span> / 20</strong></span>
+<span>정답 <strong><span id="gCount">0</span> / 3</strong></span>
+</div>
+<div class="chat" id="chat">
+<div class="message bot">
+안녕! 🐾<br><br>
+내가 동물 하나를 생각했어!<br>
+나에게 <strong>예 / 아니오</strong>로 대답할 수 있는 질문을 해봐.<br><br>
+질문은 최대 <strong>20번</strong>,<br>
+정답을 말할 기회는 <strong>3번</strong>이야! 🔎
+</div>
+</div>
+<div class="row">
+<input
+id="questionInput"
+placeholder="예: 육지에서 살아?"
+>
+<button class="ask" onclick="askQuestion()">
+질문하기
+</button>
+</div>
+<div class="tip">
+💡 서식지, 크기, 먹이, 외형, 행동, 사람과의 관계 등을 물어봐!
+</div>
+<div class="row" style="margin-top:12px">
+<input
+id="guessInput"
+placeholder="정답이라고 생각하는 동물 이름"
+>
+</div>
+<button class="guess" onclick="guessAnimal()">
+🎯 정답 말하기
+</button>
+<div id="result" class="result"></div>
+<button class="restart" onclick="restartGame()">
+🔄 새 게임
+</button>
+</div>
+<script>
+/* ============================================================
+   동물 데이터
+   ============================================================ */
+const animals = [
+{
+name:"사자",emoji:"🦁",
+features:{
+class:"mammal",
+size:"large",
+habitat:["land","grassland","forest","hot"],
+diet:["carnivore","meat"],
+legs:4,
+fur:true,feathers:false,scales:false,shell:false,
+horns:false,claws:true,sharpTeeth:true,
+wings:false,
+longTail:true,shortTail:false,longNeck:false,longNose:false,
+stripes:false,spots:false,blackWhite:false,colorful:false,
+fly:false,swim:true,jump:true,climb:false,
+fast:true,slow:false,
+nocturnal:true,diurnal:false,
+group:true,solitary:false,
+laysEggs:false,givesBirth:true,
+hibernates:false,migrates:false,
+pet:false,farm:false,domestic:false,
+friendly:false,canRaise:false,
+avoidsHumans:true,dangerous:true,
+wild:true,
+hasWhiskers:true,
+hasMane:true
+}
+},
+{
+name:"호랑이",emoji:"🐯",
+features:{
+class:"mammal",size:"large",
+habitat:["land","forest","hot"],
+diet:["carnivore","meat"],
+legs:4,
+fur:true,feathers:false,scales:false,shell:false,
+horns:false,claws:true,sharpTeeth:true,wings:false,
+longTail:true,shortTail:false,longNeck:false,longNose:false,
+stripes:true,spots:false,blackWhite:false,colorful:false,
+fly:false,swim:true,jump:true,climb:true,
+fast:true,slow:false,
+nocturnal:true,diurnal:false,
+group:false,solitary:true,
+laysEggs:false,givesBirth:true,hibernates:false,
+migrates:false,pet:false,farm:false,domestic:false,
+friendly:false,canRaise:false,avoidsHumans:true,
+dangerous:true,wild:true,hasWhiskers:true,hasMane:false
+}
+},
+{
+name:"코끼리",emoji:"🐘",
+features:{
+class:"mammal",size:"huge",
+habitat:["land","grassland","forest","hot"],
+diet:["herbivore","grass","plants","fruit"],
+legs:4,
+fur:false,feathers:false,scales:false,shell:false,
+horns:false,claws:false,sharpTeeth:false,wings:false,
+longTail:false,shortTail:true,longNeck:false,longNose:true,
+stripes:false,spots:false,blackWhite:false,colorful:false,
+fly:false,swim:true,jump:false,climb:false,
+fast:false,slow:true,
+nocturnal:false,diurnal:true,
+group:true,solitary:false,
+laysEggs:false,givesBirth:true,hibernates:false,
+migrates:true,pet:false,farm:false,domestic:false,
+friendly:true,canRaise:false,avoidsHumans:false,
+dangerous:true,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"기린",emoji:"🦒",
+features:{
+class:"mammal",size:"huge",
+habitat:["land","grassland","hot"],
+diet:["herbivore","plants","leaves"],
+legs:4,
+fur:true,feathers:false,scales:false,shell:false,
+horns:true,claws:false,sharpTeeth:false,wings:false,
+longTail:true,shortTail:false,longNeck:true,longNose:false,
+stripes:false,spots:true,blackWhite:false,colorful:false,
+fly:false,swim:true,jump:false,climb:false,
+fast:true,slow:false,
+nocturnal:false,diurnal:true,
+group:true,solitary:false,
+laysEggs:false,givesBirth:true,hibernates:false,
+migrates:true,pet:false,farm:false,domestic:false,
+friendly:true,canRaise:false,avoidsHumans:true,
+dangerous:false,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"얼룩말",emoji:"🦓",
+features:{
+class:"mammal",size:"large",
+habitat:["land","grassland","hot"],
+diet:["herbivore","grass","plants"],
+legs:4,
+fur:true,feathers:false,scales:false,shell:false,
+horns:false,claws:false,sharpTeeth:false,wings:false,
+longTail:true,shortTail:false,longNeck:false,longNose:false,
+stripes:true,spots:false,blackWhite:true,colorful:false,
+fly:false,swim:true,jump:true,climb:false,
+fast:true,slow:false,
+nocturnal:false,diurnal:true,
+group:true,solitary:false,
+laysEggs:false,givesBirth:true,hibernates:false,
+migrates:true,pet:false,farm:false,domestic:false,
+friendly:false,canRaise:false,avoidsHumans:true,
+dangerous:false,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"판다",emoji:"🐼",
+features:{
+class:"mammal",size:"large",
+habitat:["land","forest","cold"],
+diet:["herbivore","plants","bamboo"],
+legs:4,
+fur:true,feathers:false,scales:false,shell:false,
+horns:false,claws:true,sharpTeeth:true,wings:false,
+longTail:false,shortTail:true,longNeck:false,longNose:false,
+stripes:false,spots:false,blackWhite:true,colorful:false,
+fly:false,swim:true,jump:false,climb:true,
+fast:false,slow:true,
+nocturnal:false,diurnal:true,
+group:false,solitary:true,
+laysEggs:false,givesBirth:true,hibernates:false,
+migrates:false,pet:false,farm:false,domestic:false,
+friendly:true,canRaise:false,avoidsHumans:true,
+dangerous:false,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"고양이",emoji:"🐱",
+features:{
+class:"mammal",size:"small",
+habitat:["land","forest","home"],
+diet:["carnivore","meat","fish"],
+legs:4,
+fur:true,feathers:false,scales:false,shell:false,
+horns:false,claws:true,sharpTeeth:true,wings:false,
+longTail:true,shortTail:false,longNeck:false,longNose:false,
+stripes:true,spots:true,blackWhite:false,colorful:false,
+fly:false,swim:true,jump:true,climb:true,
+fast:true,slow:false,
+nocturnal:true,diurnal:false,
+group:false,solitary:true,
+laysEggs:false,givesBirth:true,hibernates:false,
+migrates:false,
+pet:true,farm:false,domestic:true,
+friendly:true,canRaise:true,avoidsHumans:false,
+dangerous:false,wild:false,hasWhiskers:true,hasMane:false
+}
+},
+{
+name:"강아지",emoji:"🐶",
+features:{
+class:"mammal",size:"small",
+habitat:["land","home","farm"],
+diet:["omnivore","meat","plants"],
+legs:4,
+fur:true,feathers:false,scales:false,shell:false,
+horns:false,claws:true,sharpTeeth:true,wings:false,
+longTail:true,shortTail:false,longNeck:false,longNose:true,
+stripes:false,spots:true,blackWhite:false,colorful:false,
+fly:false,swim:true,jump:true,climb:false,
+fast:true,slow:false,
+nocturnal:false,diurnal:true,
+group:true,solitary:false,
+laysEggs:false,givesBirth:true,hibernates:false,
+migrates:false,
+pet:true,farm:true,domestic:true,
+friendly:true,canRaise:true,avoidsHumans:false,
+dangerous:false,wild:false,hasWhiskers:true,hasMane:false
+}
+},
+{
+name:"토끼",emoji:"🐰",
+features:{
+class:"mammal",size:"small",
+habitat:["land","grassland","forest","home"],
+diet:["herbivore","grass","plants"],
+legs:4,
+fur:true,feathers:false,scales:false,shell:false,
+horns:false,claws:false,sharpTeeth:true,wings:false,
+longTail:false,shortTail:true,longNeck:false,longNose:false,
+stripes:false,spots:false,blackWhite:false,colorful:false,
+fly:false,swim:false,jump:true,climb:false,
+fast:true,slow:false,
+nocturnal:true,diurnal:false,
+group:true,solitary:false,
+laysEggs:false,givesBirth:true,hibernates:false,
+migrates:false,
+pet:true,farm:false,domestic:true,
+friendly:true,canRaise:true,avoidsHumans:false,
+dangerous:false,wild:false,hasWhiskers:true,hasMane:false
+}
+},
+{
+name:"여우",emoji:"🦊",
+features:{
+class:"mammal",size:"small",
+habitat:["land","forest","grassland","cold"],
+diet:["omnivore","meat","fruit","plants"],
+legs:4,
+fur:true,feathers:false,scales:false,shell:false,
+horns:false,claws:true,sharpTeeth:true,wings:false,
+longTail:true,shortTail:false,longNeck:false,longNose:true,
+stripes:false,spots:false,blackWhite:false,colorful:false,
+fly:false,swim:true,jump:true,climb:false,
+fast:true,slow:false,
+nocturnal:true,diurnal:false,
+group:false,solitary:true,
+laysEggs:false,givesBirth:true,hibernates:false,
+migrates:false,
+pet:false,farm:false,domestic:false,
+friendly:false,canRaise:false,avoidsHumans:true,
+dangerous:false,wild:true,hasWhiskers:true,hasMane:false
+}
+},
+{
+name:"늑대",emoji:"🐺",
+features:{
+class:"mammal",size:"large",
+habitat:["land","forest","grassland","cold"],
+diet:["carnivore","meat"],
+legs:4,
+fur:true,feathers:false,scales:false,shell:false,
+horns:false,claws:true,sharpTeeth:true,wings:false,
+longTail:true,shortTail:false,longNeck:false,longNose:true,
+stripes:false,spots:false,blackWhite:false,colorful:false,
+fly:false,swim:true,jump:true,climb:false,
+fast:true,slow:false,
+nocturnal:true,diurnal:false,
+group:true,solitary:false,
+laysEggs:false,givesBirth:true,hibernates:false,
+migrates:false,
+pet:false,farm:false,domestic:false,
+friendly:false,canRaise:false,avoidsHumans:true,
+dangerous:true,wild:true,hasWhiskers:true,hasMane:false
+}
+},
+{
+name:"소",emoji:"🐮",
+features:{
+class:"mammal",size:"large",
+habitat:["land","grassland","farm"],
+diet:["herbivore","grass","plants"],
+legs:4,
+fur:true,feathers:false,scales:false,shell:false,
+horns:true,claws:false,sharpTeeth:false,wings:false,
+longTail:true,shortTail:false,longNeck:false,longNose:false,
+stripes:false,spots:false,blackWhite:true,colorful:false,
+fly:false,swim:true,jump:false,climb:false,
+fast:false,slow:true,
+nocturnal:false,diurnal:true,
+group:true,solitary:false,
+laysEggs:false,givesBirth:true,hibernates:false,
+migrates:false,
+pet:false,farm:true,domestic:true,
+friendly:true,canRaise:true,avoidsHumans:false,
+dangerous:false,wild:false,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"말",emoji:"🐴",
+features:{
+class:"mammal",size:"large",
+habitat:["land","grassland","farm"],
+diet:["herbivore","grass","plants"],
+legs:4,
+fur:true,feathers:false,scales:false,shell:false,
+horns:false,claws:false,sharpTeeth:false,wings:false,
+longTail:true,shortTail:false,longNeck:false,longNose:true,
+stripes:false,spots:false,blackWhite:false,colorful:false,
+fly:false,swim:true,jump:true,climb:false,
+fast:true,slow:false,
+nocturnal:false,diurnal:true,
+group:true,solitary:false,
+laysEggs:false,givesBirth:true,hibernates:false,
+migrates:false,
+pet:true,farm:true,domestic:true,
+friendly:true,canRaise:true,avoidsHumans:false,
+dangerous:false,wild:false,hasWhiskers:false,hasMane:true
+}
+},
+{
+name:"돼지",emoji:"🐷",
+features:{
+class:"mammal",size:"medium",
+habitat:["land","farm"],
+diet:["omnivore","meat","plants","fruit"],
+legs:4,
+fur:true,feathers:false,scales:false,shell:false,
+horns:false,claws:false,sharpTeeth:false,wings:false,
+longTail:true,shortTail:false,longNeck:false,longNose:true,
+stripes:false,spots:false,blackWhite:false,colorful:false,
+fly:false,swim:true,jump:false,climb:false,
+fast:false,slow:true,
+nocturnal:false,diurnal:true,
+group:true,solitary:false,
+laysEggs:false,givesBirth:true,hibernates:false,
+migrates:false,
+pet:false,farm:true,domestic:true,
+friendly:true,canRaise:true,avoidsHumans:false,
+dangerous:false,wild:false,hasWhiskers:true,hasMane:false
+}
+},
+{
+name:"캥거루",emoji:"🦘",
+features:{
+class:"mammal",size:"large",
+habitat:["land","grassland","desert","hot"],
+diet:["herbivore","grass","plants"],
+legs:4,
+fur:true,feathers:false,scales:false,shell:false,
+horns:false,claws:true,sharpTeeth:false,wings:false,
+longTail:true,shortTail:false,longNeck:false,longNose:false,
+stripes:false,spots:false,blackWhite:false,colorful:false,
+fly:false,swim:true,jump:true,climb:false,
+fast:true,slow:false,
+nocturnal:true,diurnal:false,
+group:true,solitary:false,
+laysEggs:false,givesBirth:true,hibernates:false,
+migrates:false,
+pet:false,farm:false,domestic:false,
+friendly:false,canRaise:false,avoidsHumans:true,
+dangerous:false,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"돌고래",emoji:"🐬",
+features:{
+class:"mammal",size:"large",
+habitat:["water","sea"],
+diet:["carnivore","fish"],
+legs:0,
+fur:false,feathers:false,scales:false,shell:false,
+horns:false,claws:false,sharpTeeth:true,wings:false,
+longTail:true,shortTail:false,longNeck:false,longNose:false,
+stripes:false,spots:false,blackWhite:false,colorful:false,
+fly:false,swim:true,jump:true,climb:false,
+fast:true,slow:false,
+nocturnal:false,diurnal:true,
+group:true,solitary:false,
+laysEggs:false,givesBirth:true,hibernates:false,
+migrates:true,pet:false,farm:false,domestic:false,
+friendly:true,canRaise:false,avoidsHumans:false,
+dangerous:false,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"고래",emoji:"🐋",
+features:{
+class:"mammal",size:"huge",
+habitat:["water","sea","cold"],
+diet:["carnivore","fish"],
+legs:0,
+fur:false,feathers:false,scales:false,shell:false,
+horns:false,claws:false,sharpTeeth:false,wings:false,
+longTail:true,shortTail:false,longNeck:false,longNose:false,
+stripes:false,spots:false,blackWhite:false,colorful:false,
+fly:false,swim:true,jump:false,climb:false,
+fast:false,slow:true,
+nocturnal:false,diurnal:true,
+group:true,solitary:false,
+laysEggs:false,givesBirth:true,hibernates:false,
+migrates:true,pet:false,farm:false,domestic:false,
+friendly:true,canRaise:false,avoidsHumans:false,
+dangerous:false,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"상어",emoji:"🦈",
+features:{
+class:"fish",size:"large",
+habitat:["water","sea"],
+diet:["carnivore","fish","meat"],
+legs:0,
+fur:false,feathers:false,scales:true,shell:false,
+horns:false,claws:false,sharpTeeth:true,wings:false,
+longTail:true,shortTail:false,longNeck:false,longNose:false,
+stripes:false,spots:false,blackWhite:false,colorful:false,
+fly:false,swim:true,jump:true,climb:false,
+fast:true,slow:false,
+nocturnal:true,diurnal:true,
+group:false,solitary:true,
+laysEggs:true,givesBirth:false,hibernates:false,
+migrates:true,pet:false,farm:false,domestic:false,
+friendly:false,canRaise:false,avoidsHumans:true,
+dangerous:true,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"문어",emoji:"🐙",
+features:{
+class:"invertebrate",size:"small",
+habitat:["water","sea"],
+diet:["carnivore","fish","meat"],
+legs:8,
+fur:false,feathers:false,scales:false,shell:false,
+horns:false,claws:false,sharpTeeth:false,wings:false,
+longTail:false,shortTail:false,longNeck:false,longNose:false,
+stripes:false,spots:true,blackWhite:false,colorful:true,
+fly:false,swim:true,jump:false,climb:false,
+fast:false,slow:true,
+nocturnal:true,diurnal:false,
+group:false,solitary:true,
+laysEggs:true,givesBirth:false,hibernates:false,
+migrates:false,pet:false,farm:false,domestic:false,
+friendly:false,canRaise:false,avoidsHumans:true,
+dangerous:false,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"펭귄",emoji:"🐧",
+features:{
+class:"bird",size:"medium",
+habitat:["land","water","sea","cold"],
+diet:["carnivore","fish"],
+legs:2,
+fur:false,feathers:true,scales:false,shell:false,
+horns:false,claws:true,sharpTeeth:false,wings:true,
+longTail:false,shortTail:true,longNeck:false,longNose:false,
+stripes:false,spots:false,blackWhite:true,colorful:false,
+fly:false,swim:true,jump:true,climb:false,
+fast:true,slow:false,
+nocturnal:false,diurnal:true,
+group:true,solitary:false,
+laysEggs:true,givesBirth:false,hibernates:false,
+migrates:true,pet:false,farm:false,domestic:false,
+friendly:true,canRaise:false,avoidsHumans:false,
+dangerous:false,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"독수리",emoji:"🦅",
+features:{
+class:"bird",size:"large",
+habitat:["land","forest","mountain","sky"],
+diet:["carnivore","meat"],
+legs:2,
+fur:false,feathers:true,scales:false,shell:false,
+horns:false,claws:true,sharpTeeth:true,wings:true,
+longTail:true,shortTail:false,longNeck:false,longNose:false,
+stripes:false,spots:false,blackWhite:false,colorful:false,
+fly:true,swim:false,jump:false,climb:true,
+fast:true,slow:false,
+nocturnal:false,diurnal:true,
+group:false,solitary:true,
+laysEggs:true,givesBirth:false,hibernates:false,
+migrates:true,pet:false,farm:false,domestic:false,
+friendly:false,canRaise:false,avoidsHumans:true,
+dangerous:true,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"부엉이",emoji:"🦉",
+features:{
+class:"bird",size:"small",
+habitat:["land","forest","sky"],
+diet:["carnivore","meat"],
+legs:2,
+fur:false,feathers:true,scales:false,shell:false,
+horns:false,claws:true,sharpTeeth:false,wings:true,
+longTail:false,shortTail:true,longNeck:false,longNose:false,
+stripes:false,spots:true,blackWhite:false,colorful:false,
+fly:true,swim:false,jump:false,climb:true,
+fast:true,slow:false,
+nocturnal:true,diurnal:false,
+group:false,solitary:true,
+laysEggs:true,givesBirth:false,hibernates:false,
+migrates:false,pet:false,farm:false,domestic:false,
+friendly:false,canRaise:false,avoidsHumans:true,
+dangerous:false,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"오리",emoji:"🦆",
+features:{
+class:"bird",size:"small",
+habitat:["land","water","river","lake","sky"],
+diet:["omnivore","plants","fish"],
+legs:2,
+fur:false,feathers:true,scales:false,shell:false,
+horns:false,claws:false,sharpTeeth:false,wings:true,
+longTail:false,shortTail:true,longNeck:false,longNose:false,
+stripes:false,spots:false,blackWhite:false,colorful:false,
+fly:true,swim:true,jump:false,climb:false,
+fast:true,slow:false,
+nocturnal:false,diurnal:true,
+group:true,solitary:false,
+laysEggs:true,givesBirth:false,hibernates:false,
+migrates:true,pet:true,farm:true,domestic:true,
+friendly:true,canRaise:true,avoidsHumans:false,
+dangerous:false,wild:false,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"닭",emoji:"🐔",
+features:{
+class:"bird",size:"small",
+habitat:["land","farm"],
+diet:["omnivore","plants","insects"],
+legs:2,
+fur:false,feathers:true,scales:false,shell:false,
+horns:false,claws:true,sharpTeeth:false,wings:true,
+longTail:true,shortTail:false,longNeck:false,longNose:false,
+stripes:false,spots:false,blackWhite:false,colorful:true,
+fly:true,swim:false,jump:true,climb:false,
+fast:false,slow:true,
+nocturnal:false,diurnal:true,
+group:true,solitary:false,
+laysEggs:true,givesBirth:false,hibernates:false,
+migrates:false,pet:false,farm:true,domestic:true,
+friendly:true,canRaise:true,avoidsHumans:false,
+dangerous:false,wild:false,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"뱀",emoji:"🐍",
+features:{
+class:"reptile",size:"medium",
+habitat:["land","forest","desert","water","hot"],
+diet:["carnivore","meat"],
+legs:0,
+fur:false,feathers:false,scales:true,shell:false,
+horns:false,claws:false,sharpTeeth:true,wings:false,
+longTail:true,shortTail:false,longNeck:false,longNose:false,
+stripes:true,spots:true,blackWhite:false,colorful:true,
+fly:false,swim:true,jump:false,climb:true,
+fast:true,slow:false,
+nocturnal:true,diurnal:true,
+group:false,solitary:true,
+laysEggs:true,givesBirth:false,hibernates:true,
+migrates:false,
+pet:true,farm:false,domestic:false,
+friendly:false,canRaise:true,avoidsHumans:true,
+dangerous:true,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"거북이",emoji:"🐢",
+features:{
+class:"reptile",size:"small",
+habitat:["land","water","river","lake","hot"],
+diet:["herbivore","plants"],
+legs:4,
+fur:false,feathers:false,scales:true,shell:true,
+horns:false,claws:true,sharpTeeth:false,wings:false,
+longTail:false,shortTail:true,longNeck:true,longNose:false,
+stripes:false,spots:false,blackWhite:false,colorful:false,
+fly:false,swim:true,jump:false,climb:false,
+fast:false,slow:true,
+nocturnal:false,diurnal:true,
+group:false,solitary:true,
+laysEggs:true,givesBirth:false,hibernates:true,
+migrates:false,
+pet:true,farm:false,domestic:true,
+friendly:true,canRaise:true,avoidsHumans:false,
+dangerous:false,wild:false,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"악어",emoji:"🐊",
+features:{
+class:"reptile",size:"large",
+habitat:["land","water","river","lake","hot"],
+diet:["carnivore","meat","fish"],
+legs:4,
+fur:false,feathers:false,scales:true,shell:false,
+horns:false,claws:true,sharpTeeth:true,wings:false,
+longTail:true,shortTail:false,longNeck:false,longNose:true,
+stripes:false,spots:false,blackWhite:false,colorful:false,
+fly:false,swim:true,jump:true,climb:false,
+fast:true,slow:false,
+nocturnal:true,diurnal:false,
+group:false,solitary:true,
+laysEggs:true,givesBirth:false,hibernates:false,
+migrates:false,
+pet:false,farm:false,domestic:false,
+friendly:false,canRaise:false,avoidsHumans:true,
+dangerous:true,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"개구리",emoji:"🐸",
+features:{
+class:"amphibian",size:"small",
+habitat:["land","water","river","lake","forest","hot"],
+diet:["carnivore","insects"],
+legs:4,
+fur:false,feathers:false,scales:false,shell:false,
+horns:false,claws:false,sharpTeeth:false,wings:false,
+longTail:false,shortTail:true,longNeck:false,longNose:false,
+stripes:false,spots:true,blackWhite:false,colorful:true,
+fly:false,swim:true,jump:true,climb:false,
+fast:true,slow:false,
+nocturnal:true,diurnal:false,
+group:false,solitary:true,
+laysEggs:true,givesBirth:false,hibernates:true,
+migrates:false,pet:true,farm:false,domestic:false,
+friendly:true,canRaise:true,avoidsHumans:false,
+dangerous:false,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"나비",emoji:"🦋",
+features:{
+class:"insect",size:"tiny",
+habitat:["land","forest","grassland","sky","tree","hot"],
+diet:["herbivore","plants","fruit"],
+legs:6,
+fur:false,feathers:false,scales:true,shell:false,
+horns:false,claws:false,sharpTeeth:false,wings:true,
+longTail:false,shortTail:true,longNeck:false,longNose:false,
+stripes:false,spots:true,blackWhite:false,colorful:true,
+fly:true,swim:false,jump:false,climb:true,
+fast:true,slow:false,
+nocturnal:false,diurnal:true,
+group:false,solitary:true,
+laysEggs:true,givesBirth:false,hibernates:false,
+migrates:true,
+pet:false,farm:false,domestic:false,
+friendly:true,canRaise:false,avoidsHumans:false,
+dangerous:false,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"벌",emoji:"🐝",
+features:{
+class:"insect",size:"tiny",
+habitat:["land","forest","grassland","sky","tree","hot"],
+diet:["herbivore","plants","nectar"],
+legs:6,
+fur:true,feathers:false,scales:false,shell:false,
+horns:false,claws:false,sharpTeeth:false,wings:true,
+longTail:false,shortTail:true,longNeck:false,longNose:false,
+stripes:true,spots:false,blackWhite:false,colorful:true,
+fly:true,swim:false,jump:false,climb:true,
+fast:true,slow:false,
+nocturnal:false,diurnal:true,
+group:true,solitary:false,
+laysEggs:true,givesBirth:false,hibernates:false,
+migrates:false,
+pet:false,farm:false,domestic:false,
+friendly:false,canRaise:false,avoidsHumans:true,
+dangerous:true,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"거미",emoji:"🕷️",
+features:{
+class:"arachnid",size:"tiny",
+habitat:["land","forest","tree","desert"],
+diet:["carnivore","insects"],
+legs:8,
+fur:false,feathers:false,scales:false,shell:false,
+horns:false,claws:false,sharpTeeth:false,wings:false,
+longTail:false,shortTail:false,longNeck:false,longNose:false,
+stripes:false,spots:true,blackWhite:false,colorful:false,
+fly:false,swim:false,jump:true,climb:true,
+fast:false,slow:true,
+nocturnal:true,diurnal:false,
+group:false,solitary:true,
+laysEggs:true,givesBirth:false,hibernates:false,
+migrates:false,
+pet:true,farm:false,domestic:false,
+friendly:false,canRaise:true,avoidsHumans:true,
+dangerous:true,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"달팽이",emoji:"🐌",
+features:{
+class:"mollusk",size:"tiny",
+habitat:["land","forest","garden","water"],
+diet:["herbivore","plants"],
+legs:0,
+fur:false,feathers:false,scales:false,shell:true,
+horns:false,claws:false,sharpTeeth:false,wings:false,
+longTail:false,shortTail:true,longNeck:false,longNose:false,
+stripes:false,spots:false,blackWhite:false,colorful:false,
+fly:false,swim:false,jump:false,climb:true,
+fast:false,slow:true,
+nocturnal:true,diurnal:false,
+group:false,solitary:true,
+laysEggs:true,givesBirth:false,hibernates:true,
+migrates:false,
+pet:true,farm:false,domestic:false,
+friendly:true,canRaise:true,avoidsHumans:false,
+dangerous:false,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"박쥐",emoji:"🦇",
+features:{
+class:"mammal",size:"small",
+habitat:["land","forest","sky","tree","cave","hot"],
+diet:["insects","fruit"],
+legs:2,
+fur:true,feathers:false,scales:false,shell:false,
+horns:false,claws:true,sharpTeeth:true,wings:true,
+longTail:false,shortTail:true,longNeck:false,longNose:false,
+stripes:false,spots:false,blackWhite:false,colorful:false,
+fly:true,swim:false,jump:false,climb:true,
+fast:true,slow:false,
+nocturnal:true,diurnal:false,
+group:true,solitary:false,
+laysEggs:false,givesBirth:true,hibernates:true,
+migrates:false,
+pet:false,farm:false,domestic:false,
+friendly:false,canRaise:false,avoidsHumans:true,
+dangerous:false,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"공작",emoji:"🦚",
+features:{
+class:"bird",size:"large",
+habitat:["land","forest","grassland","farm"],
+diet:["omnivore","plants","insects","fruit"],
+legs:2,
+fur:false,feathers:true,scales:false,shell:false,
+horns:false,claws:true,sharpTeeth:false,wings:true,
+longTail:true,shortTail:false,longNeck:false,longNose:false,
+stripes:false,spots:true,blackWhite:false,colorful:true,
+fly:true,swim:false,jump:true,climb:true,
+fast:false,slow:true,
+nocturnal:false,diurnal:true,
+group:true,solitary:false,
+laysEggs:true,givesBirth:false,hibernates:false,
+migrates:false,pet:false,farm:true,domestic:false,
+friendly:true,canRaise:true,avoidsHumans:false,
+dangerous:false,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"플라밍고",emoji:"🦩",
+features:{
+class:"bird",size:"large",
+habitat:["water","lake","land","hot"],
+diet:["herbivore","plants"],
+legs:2,
+fur:false,feathers:true,scales:false,shell:false,
+horns:false,claws:false,sharpTeeth:false,wings:true,
+longTail:false,shortTail:true,longNeck:true,longNose:false,
+stripes:false,spots:false,blackWhite:false,colorful:true,
+fly:true,swim:true,jump:false,climb:false,
+fast:false,slow:true,
+nocturnal:false,diurnal:true,
+group:true,solitary:false,
+laysEggs:true,givesBirth:false,hibernates:false,
+migrates:true,pet:false,farm:false,domestic:false,
+friendly:true,canRaise:false,avoidsHumans:false,
+dangerous:false,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"사슴",emoji:"🦌",
+features:{
+class:"mammal",size:"large",
+habitat:["land","forest","grassland","cold"],
+diet:["herbivore","plants","grass"],
+legs:4,
+fur:true,feathers:false,scales:false,shell:false,
+horns:true,claws:false,sharpTeeth:false,wings:false,
+longTail:false,shortTail:true,longNeck:false,longNose:false,
+stripes:false,spots:true,blackWhite:false,colorful:false,
+fly:false,swim:true,jump:true,climb:false,
+fast:true,slow:false,
+nocturnal:false,diurnal:true,
+group:true,solitary:false,
+laysEggs:false,givesBirth:true,hibernates:false,
+migrates:true,pet:false,farm:false,domestic:false,
+friendly:true,canRaise:false,avoidsHumans:true,
+dangerous:false,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"하마",emoji:"🦛",
+features:{
+class:"mammal",size:"huge",
+habitat:["land","water","river","hot"],
+diet:["herbivore","grass","plants"],
+legs:4,
+fur:false,feathers:false,scales:false,shell:false,
+horns:false,claws:false,sharpTeeth:true,wings:false,
+longTail:false,shortTail:true,longNeck:false,longNose:false,
+stripes:false,spots:false,blackWhite:false,colorful:false,
+fly:false,swim:true,jump:false,climb:false,
+fast:true,slow:false,
+nocturnal:true,diurnal:false,
+group:true,solitary:false,
+laysEggs:false,givesBirth:true,hibernates:false,
+migrates:false,
+pet:false,farm:false,domestic:false,
+friendly:false,canRaise:false,avoidsHumans:true,
+dangerous:true,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"코뿔소",emoji:"🦏",
+features:{
+class:"mammal",size:"huge",
+habitat:["land","grassland","hot"],
+diet:["herbivore","grass","plants"],
+legs:4,
+fur:false,feathers:false,scales:false,shell:false,
+horns:true,claws:false,sharpTeeth:false,wings:false,
+longTail:true,shortTail:false,longNeck:false,longNose:true,
+stripes:false,spots:false,blackWhite:false,colorful:false,
+fly:false,swim:true,jump:false,climb:false,
+fast:true,slow:false,
+nocturnal:true,diurnal:false,
+group:false,solitary:true,
+laysEggs:false,givesBirth:true,hibernates:false,
+migrates:false,
+pet:false,farm:false,domestic:false,
+friendly:false,canRaise:false,avoidsHumans:true,
+dangerous:true,wild:true,hasWhiskers:false,hasMane:false
+}
+},
+{
+name:"햄스터",emoji:"🐹",
+features:{
+class:"mammal",size:"tiny",
+habitat:["land","home"],
+diet:["omnivore","plants","seeds"],
+legs:4,
+fur:true,feathers:false,scales:false,shell:false,
+horns:false,claws:true,sharpTeeth:true,wings:false,
+longTail:false,shortTail:true,longNeck:false,longNose:false,
+stripes:false,spots:false,blackWhite:false,colorful:false,
+fly:false,swim:false,jump:true,climb:true,
+fast:true,slow:false,
+nocturnal:true,diurnal:false,
+group:false,solitary:true,
+laysEggs:false,givesBirth:true,hibernates:false,
+migrates:false,
+pet:true,farm:false,domestic:true,
+friendly:true,canRaise:true,avoidsHumans:false,
+dangerous:false,wild:false,hasWhiskers:true,hasMane:false
+}
+}
+];
+/* ============================================================
+   질문 키워드
+   ============================================================ */
+const rules = [
+/* 서식지 */
+{keys:["육지","땅","육상"],check:a=>a.habitat.includes("land")},
+{keys:["물","물속","물에서","수중"],check:a=>a.habitat.includes("water")},
+{keys:["바다","바닷속","해양"],check:a=>a.habitat.includes("sea")},
+{keys:["강","강물"],check:a=>a.habitat.includes("river")},
+{keys:["호수"],check:a=>a.habitat.includes("lake")},
+{keys:["하늘","공중","날아다니는 곳"],check:a=>a.habitat.includes("sky")},
+{keys:["나무","나무 위","나무에서"],check:a=>a.habitat.includes("tree")},
+{keys:["숲","산림"],check:a=>a.habitat.includes("forest")},
+{keys:["초원"],check:a=>a.habitat.includes("grassland")},
+{keys:["사막"],check:a=>a.habitat.includes("desert")},
+{keys:["농장"],check:a=>a.habitat.includes("farm")},
+{keys:["집","가정"],check:a=>a.habitat.includes("home")},
+{keys:["추운 곳","추운 지역","극지","추운"],check:a=>a.habitat.includes("cold")},
+{keys:["더운 곳","더운 지역","더운"],check:a=>a.habitat.includes("hot")},
+/* 크기 */
+{keys:["아주 커","엄청 커","매우 커","거대","거대한"],check:a=>a.size==="huge"},
+{keys:["큰 동물","크기가 커","몸집이 커","덩치가 커","큰 편"],check:a=>a.size==="large"||a.size==="huge"},
+{keys:["중간 크기","중간 정도"],check:a=>a.size==="medium"},
+{keys:["작은 동물","크기가 작","몸집이 작","덩치가 작","작은 편"],check:a=>a.size==="small"||a.size==="tiny"},
+{keys:["아주 작","엄청 작","매우 작","작디작"],check:a=>a.size==="tiny"},
+/* 분류 */
+{keys:["포유류","포유 동물","젖을 먹"],check:a=>a.class==="mammal"},
+{keys:["새","조류","새 종류"],check:a=>a.class==="bird"},
+{keys:["파충류"],check:a=>a.class==="reptile"},
+{keys:["양서류"],check:a=>a.class==="amphibian"},
+{keys:["곤충"],check:a=>a.class==="insect"},
+{keys:["물고기","어류"],check:a=>a.class==="fish"},
+{keys:["거미류","거미 종류"],check:a=>a.class==="arachnid"},
+{keys:["연체동물"],check:a=>a.class==="mollusk"},
+/* 다리 */
+{keys:["다리가 0","다리 0","다리 없어"],check:a=>a.legs===0},
+{keys:["다리가 2","다리 2","두 다리","두발"],check:a=>a.legs===2},
+{keys:["다리가 4","다리 4","네 다리","네발"],check:a=>a.legs===4},
+{keys:["다리가 5","다리 5","다섯 다리"],check:a=>a.legs===5},
+{keys:["다리가 6","다리 6","여섯 다리"],check:a=>a.legs===6},
+{keys:["다리가 8","다리 8","여덟 다리"],check:a=>a.legs===8},
+/* 외형 */
+{keys:["털","털이 있어","털이 있"],check:a=>a.fur},
+{keys:["깃털","깃털이 있어"],check:a=>a.feathers},
+{keys:["비늘","비늘이 있어"],check:a=>a.scales},
+{keys:["껍데기","등껍질","껍질"],check:a=>a.shell},
+{keys:["뿔","뿔이 있어"],check:a=>a.horns},
+{keys:["발톱","발톱이 있어"],check:a=>a.claws},
+{keys:["날카로운 이빨","이빨이 날카","날카로운 이"],check:a=>a.sharpTeeth},
+{keys:["날개","날개가 있어"],check:a=>a.wings},
+{keys:["긴 꼬리","꼬리가 길","꼬리 길"],check:a=>a.longTail},
+{keys:["짧은 꼬리","꼬리가 짧","꼬리 짧"],check:a=>a.shortTail},
+{keys:["긴 목","목이 길"],check:a=>a.longNeck},
+{keys:["긴 코","코가 길","긴 주둥이"],check:a=>a.longNose},
+{keys:["줄무늬","줄이 있어","줄이 있"],check:a=>a.stripes},
+{keys:["점박이","점무늬","점이 있어","반점"],check:a=>a.spots},
+{keys:["검정과 흰색","검은색과 흰색","흑백"],check:a=>a.blackWhite},
+{keys:["알록달록","화려한 색","색이 화려"],check:a=>a.colorful},
+{keys:["수염","수염이 있어"],check:a=>a.hasWhiskers},
+{keys:["갈기","갈기가 있어"],check:a=>a.hasMane},
+/* 먹이 */
+{keys:["초식","풀을 먹","풀 먹","식물을 먹"],check:a=>a.diet.includes("herbivore")},
+{keys:["육식","고기를 먹","고기 먹"],check:a=>a.diet.includes("carnivore")},
+{keys:["잡식","여러 가지를 먹"],check:a=>a.diet.includes("omnivore")},
+{keys:["과일을 먹","과일 먹"],check:a=>a.diet.includes("fruit")},
+{keys:["물고기를 먹","물고기 먹"],check:a=>a.diet.includes("fish")},
+{keys:["곤충을 먹","곤충 먹"],check:a=>a.diet.includes("insects")},
+{keys:["대나무"],check:a=>a.diet.includes("bamboo")},
+{keys:["씨앗"],check:a=>a.diet.includes("seeds")},
+{keys:["꿀","꽃꿀"],check:a=>a.diet.includes("nectar")},
+/* 움직임 */
+{keys:["날 수","날아","날아다녀","비행"],check:a=>a.fly},
+{keys:["수영","헤엄","헤엄쳐"],check:a=>a.swim},
+{keys:["점프","뛰어오","점프해"],check:a=>a.jump},
+{keys:["나무를 타","나무에 올라","나무를 올라"],check:a=>a.climb},
+{keys:["빨라","빠르게","속도가 빨라"],check:a=>a.fast},
+{keys:["느려","느리게","속도가 느려"],check:a=>a.slow},
+/* 생활 */
+{keys:["밤에 활동","밤에 살아","야행성","밤에 움직"],check:a=>a.nocturnal},
+{keys:["낮에 활동","낮에 살아","주행성","낮에 움직"],check:a=>a.diurnal},
+{keys:["무리","떼로","여럿이","같이 살아"],check:a=>a.group},
+{keys:["혼자","단독","혼자 살아"],check:a=>a.solitary},
+{keys:["겨울잠","동면"],check:a=>a.hibernates},
+{keys:["이동","철새","이주"],check:a=>a.migrates},
+/* 번식 */
+{keys:["알을 낳","알 낳","알을 낳아"],check:a=>a.laysEggs},
+{keys:["새끼를 낳","아기를 낳","출산"],check:a=>a.givesBirth},
+/* 사람과의 관계 */
+{keys:["사람과 친","사람에게 친","친근","사람을 좋아"],check:a=>a.friendly},
+{keys:["사람이 키울","키울 수","키울수","집에서 키울"],check:a=>a.canRaise},
+{keys:["반려동물","애완동물"],check:a=>a.pet},
+{keys:["가축","가축이야"],check:a=>a.farm},
+{keys:["집에서 키워","가정에서 키워"],check:a=>a.domestic},
+{keys:["사람을 피","사람을 무서워"],check:a=>a.avoidsHumans},
+{keys:["사람에게 위험","위험한 동물","사람을 공격"],check:a=>a.dangerous},
+{keys:["야생동물","야생에서"],check:a=>a.wild}
+];
+/* ============================================================
+   게임 상태
+   ============================================================ */
+let secretAnimal =
+animals[Math.floor(Math.random()*animals.length)];
+let questionCount=0;
+let guessCount=0;
+let gameOver=false;
+/* ============================================================
+   질문 처리
+   ============================================================ */
+function askQuestion(){
+if(gameOver)return;
+if(questionCount>=20){
+addMessage("질문 20번을 모두 사용했어! 😮 이제 정답을 말해봐!","bot");
+return;
+}
+const input=document.getElementById("questionInput");
+const question=input.value.trim();
+if(!question){
+alert("질문을 입력해줘!");
+return;
+}
+addMessage(question,"user");
+questionCount++;
+document.getElementById("qCount").textContent=questionCount;
+const answer=findAnswer(question);
+if(answer===null){
+addMessage(
+"음... 🤔 그 질문은 내가 준비한 특징에는 없네!<br>"+
+"다른 특징을 질문해 봐. 예를 들면 <strong>육지, 물, 크기, 털, 먹이, 사람과의 관계</strong> 같은 걸 물어볼 수 있어!",
+"bot"
+);
+}else{
+addMessage(
+answer ? "예! 😊" : "아니오! 🙅",
+"bot"
+);
+}
+input.value="";
+input.focus();
+if(questionCount===20){
+addMessage(
+"질문 20번을 모두 사용했어! 🔎<br>"+
+"이제 정답을 말해봐!",
+"bot"
+);
+}
+}
+/* ============================================================
+   질문 분석
+   ============================================================ */
+function findAnswer(question){
+for(const rule of rules){
+for(const key of rule.keys){
+if(question.includes(key)){
+return rule.check(secretAnimal.features);
+}
+}
+}
+return null;
+}
+/* ============================================================
+   정답
+   ============================================================ */
+function guessAnimal(){
+if(gameOver)return;
+if(guessCount>=3){
+addMessage("정답 기회를 모두 사용했어!","bot");
+return;
+}
+const input=document.getElementById("guessInput");
+const guess=input.value.trim();
+if(!guess){
+alert("동물 이름을 입력해줘!");
+return;
+}
+guessCount++;
+document.getElementById("gCount").textContent=guessCount;
+addMessage("🎯 "+guess+"!","user");
+input.value="";
+if(guess===secretAnimal.name){
+gameOver=true;
+addMessage(
+"🎉 정답이야!<br>"+
+"내가 생각한 동물은 "+
+secretAnimal.emoji+
+" <strong>"+secretAnimal.name+"</strong>이었어!",
+"bot"
+);
+showResult("🎉 축하합니다!! 🎉","success");
+fanfare();
+return;
+}
+addMessage("🥲 아쉽지만 정답이 아니야!","bot");
+showResult("다시 도전하세요🥲","fail");
+if(guessCount===3){
+gameOver=true;
+addMessage(
+"정답 기회를 모두 사용했어! 🥹<br>"+
+"정답은 "+
+secretAnimal.emoji+
+" <strong>"+secretAnimal.name+"</strong>이었어!",
+"bot"
+);
+showResult("다시 도전하세요🥹","fail");
+}
+}
+/* ============================================================
+   메시지
+   ============================================================ */
+function addMessage(text,type){
+const chat=document.getElementById("chat");
+const div=document.createElement("div");
+div.className="message "+type;
+div.innerHTML=text;
+chat.appendChild(div);
+chat.scrollTop=chat.scrollHeight;
+}
+/* ============================================================
+   결과
+   ============================================================ */
+function showResult(text,type){
+const result=document.getElementById("result");
+result.textContent=text;
+result.className="result "+type;
+result.style.display="block";
+}
+/* ============================================================
+   팡파레
+   ============================================================ */
+function fanfare(){
+const colors=[
+"#ff6b6b",
+"#ffd93d",
+"#6bcB77",
+"#4d96ff",
+"#c77dff",
+"#ff9f1c"
+];
+for(let i=0;i<120;i++){
+const piece=document.createElement("div");
+piece.style.position="fixed";
+piece.style.top="-20px";
+piece.style.left=Math.random()*100+"vw";
+piece.style.width=6+Math.random()*8+"px";
+piece.style.height=6+Math.random()*8+"px";
+piece.style.background=
+colors[Math.floor(Math.random()*colors.length)];
+piece.style.zIndex="9999";
+piece.style.animation=
+"fall 2.8s linear forwards";
+document.body.appendChild(piece);
+setTimeout(()=>piece.remove(),3500);
+}
+}
+const style=document.createElement("style");
+style.innerHTML=`
+@keyframes fall{
+to{
+transform:translateY(110vh) rotate(720deg);
+opacity:0;
+}
+}`;
+document.head.appendChild(style);
+/* ============================================================
+   엔터키
+   ============================================================ */
+document.getElementById("questionInput")
+.addEventListener("keydown",function(e){
+if(e.key==="Enter"){
+askQuestion();
+}
+});
+document.getElementById("guessInput")
+.addEventListener("keydown",function(e){
+if(e.key==="Enter"){
+guessAnimal();
+}
+});
+/* ============================================================
+   새 게임
+   ============================================================ */
+function restartGame(){
+secretAnimal=
+animals[Math.floor(Math.random()*animals.length)];
+questionCount=0;
+guessCount=0;
+gameOver=false;
+document.getElementById("qCount").textContent="0";
+document.getElementById("gCount").textContent="0";
+document.getElementById("result").style.display="none";
+document.getElementById("questionInput").value="";
+document.getElementById("guessInput").value="";
+document.getElementById("chat").innerHTML=`
+<div class="message bot">
+새로운 동물을 골랐어! 🐾<br><br>
+이번에는 어떤 동물일까?<br>
+질문을 최대 20번까지 해봐! 🔎<br><br>
+정답을 말할 기회는 3번이야!
+</div>
+`;
+document.getElementById("questionInput").focus();
+}
+</script>
+</body>
+</html>
